@@ -28,7 +28,7 @@ socket = networking.connect((HOST, PORT))
 
 # Wait for user to type messages until user presses Ctrl-C, then quit.
 try:
-    while(True):
+    while True:
         networking.send(serialize(parse(raw_input())), socket)
 except KeyboardInterrupt:
     socket.close()
