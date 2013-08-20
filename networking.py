@@ -20,5 +20,5 @@ def send(serializedData, sock):
         print "[Confirmation of receipt not received from server.]"
         raise
 
-    if (received != serializedData):
+    if received != serializedData:
         print "[Data was mangled between client and server!]"

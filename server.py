@@ -12,15 +12,18 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle(self):
         # self.request is the TCP socket connected to the client
-        while(True):
+        while True:
             self.data = self.request.recv(1024)
-            if(self.data == ''):
+            if self.data == '':
                 print "[Client quit.]"
                 break
 
+            self.server.messages.append((self.client_address, self.data))
+            print self.server.messages
+
             self.request.sendall(self.data) # Send back the same data.
             self.data = self.data.strip() # Strip _after_ checking for quit!
-            print "{} wrote:".format(self.client_address[0])
+            print "{} wrote:".format(self.client_address)
             print self.data
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -29,11 +32,11 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 if __name__ == "__main__":
     HOST, PORT = "localhost", 9999
 
+
     # Threading voodoo
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
+    server.messages = []
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
-    server_thread.start()
-    print "Server loop running in thread:", server_thread.name
 
     server.serve_forever()
