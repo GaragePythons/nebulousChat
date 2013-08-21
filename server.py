@@ -1,3 +1,4 @@
+from serializing import serialize, unserialize
 import threading
 import SocketServer
 
@@ -11,20 +12,18 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     """
 
     def handle(self):
-        # self.request is the TCP socket connected to the client
+        # self.request is the TCP socket connected to the client.
         while True:
             self.data = self.request.recv(1024)
             if self.data == '':
                 print "[Client quit.]"
                 break
-
-            self.server.messages.append((self.client_address, self.data))
-            print self.server.messages
-
             self.request.sendall(self.data) # Send back the same data.
-            self.data = self.data.strip() # Strip _after_ checking for quit!
-            print "{} wrote:".format(self.client_address)
-            print self.data
+
+            self.query = unserialize(self.data)
+            # Work out what the client wants...
+
+            # self.server.messages.append((self.client_address, self.data))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass

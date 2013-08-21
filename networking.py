@@ -8,7 +8,7 @@ def connect((HOST, PORT)):
         print "[Connecting failed.]"
         raise
 
-def send(serializedData, sock):
+def sendFromClient(serializedData, sock):
     try:
         sock.sendall(serializedData)
     except:
@@ -22,3 +22,6 @@ def send(serializedData, sock):
 
     if received != serializedData:
         print "[Data was mangled between client and server!]"
+
+def pullMessageList():
+    pass
