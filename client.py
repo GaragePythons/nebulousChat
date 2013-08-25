@@ -15,15 +15,12 @@ def timestamp():
 
 def sender(sock):
     while True:
-        newMessage = q.Message()
-        newMessage.messageString = raw_input()
-        newMessage.timestamp = timestamp()
-        n.sendFromClient(serialize(newMessage), sock)
-        n.pullMessageList()
+        messageString = raw_input()
+        n.sendFromClient(serialize(q.Message(messageString, timestamp())), sock)
 
 def receiver(sock):
     while True:
-        receiveToClient(sock)
+        n.receiveToClient(sock)
 
 
 if __name__ == "__main__":
