@@ -2,6 +2,8 @@ import socket
 
 def connect((HOST, PORT)):
     try:
+        sock = socket.socket()
+        sock.bind(('', 0))
         sock = socket.create_connection((HOST, PORT))
         return sock
     except:
@@ -23,5 +25,13 @@ def sendFromClient(serializedData, sock):
     if received != serializedData:
         print "[Data was mangled between client and server!]"
 
+def receiveToClient(sock):
+    while True:
+        received = sock.recv(1024)
+        print received.messageString
+
 def pullMessageList():
     pass
+
+def clientAddress(sock):
+    return sock.getsockname()
