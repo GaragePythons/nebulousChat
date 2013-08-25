@@ -1,31 +1,42 @@
 from enum import enum
-from serializing import serialize
+from serializing import serialize, unserialize
 import queries as q
 import networking as n
+import server as s
+import thread
 import time
 
-HOST, PORT = "localhost", 9999
+HOST, PORT = "localhost", 9998
 
 keywords = [("nick")]
 
 def timestamp():
     return time.time()
 
-def dummyInputField(socket):
+def sender(sock):
     while True:
         newMessage = q.Message()
         newMessage.messageString = raw_input()
         newMessage.timestamp = timestamp()
-        n.sendFromClient(serialize(newMessage), socket)
+        n.sendFromClient(serialize(newMessage), sock)
         n.pullMessageList()
+
+def receiver(sock):
+    while True:
+        receiveToClient(sock)
+
 
 if __name__ == "__main__":
     # Connect to server.
-    socket = n.connect((HOST, PORT))
-
+    sendSocket = n.connect((HOST, PORT))
+    receiveSocket = n.connect((HOST, PORT))
+    print (  "[Connected as " + n.clientAddress(socket)[0]
+           + ":" + str(n.clientAddress(socket)[1]) + ".]")
     # Wait for user to type messages until user presses Ctrl-C, then quit.
     try:
-        dummyInputField(socket)
-    except KeyboardInterrupt:
+        # dummyInputField(socket)
+        senderThread = thread.start_new_thread(sender, (sendSocket))
+        receiverThread = thread.start_new_thread(receiver, (receiveSocket))
+    finally:
         socket.close()
         print "\n[Closing socket and quitting.]"
