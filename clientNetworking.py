@@ -38,7 +38,6 @@ def sendFromClient(serializedData, sock):
 def receive(sock):
     while True:
         received = sock.recv(1024)
-        print received.messageString
 
 def pullMessageList():
     pass
