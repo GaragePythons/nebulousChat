@@ -10,6 +10,16 @@ def connect((HOST, PORT)):
         print "[Connecting failed.]"
         raise
 
+def sendConnect((HOST, PORT)):
+    sock = connect((HOST, PORT))
+    sock.sendall("send")
+    return sock
+
+def listenConnect((HOST, PORT)):
+    sock = connect((HOST, PORT))
+    sock.sendall("listen") 
+    return sock
+
 def sendFromClient(serializedData, sock):
     try:
         sock.sendall(serializedData)
@@ -25,7 +35,7 @@ def sendFromClient(serializedData, sock):
     if received != serializedData:
         print "[Data was mangled between client and server!]"
 
-def receiveToClient(sock):
+def receive(sock):
     while True:
         received = sock.recv(1024)
         print received.messageString

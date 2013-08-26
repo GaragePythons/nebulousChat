@@ -1,7 +1,7 @@
 from enum import enum
 from serializing import serialize, unserialize
 import queries as q
-import networking as n
+import clientNetworking as n
 import server as s
 import thread
 import time
@@ -18,22 +18,23 @@ def sender(sock):
         messageString = raw_input()
         n.sendFromClient(serialize(q.Message(messageString, timestamp())), sock)
 
-def receiver(sock):
+def listener(sock):
     while True:
-        n.receiveToClient(sock)
+        n.receive(sock)
 
 
 if __name__ == "__main__":
     # Connect to server.
-    sendSocket = n.connect((HOST, PORT))
-    receiveSocket = n.connect((HOST, PORT))
-    print (  "[Connected as " + n.clientAddress(socket)[0]
-           + ":" + str(n.clientAddress(socket)[1]) + ".]")
+    sendSocket = n.sendConnect((HOST, PORT))
+    listenSocket = n.listenConnect((HOST, PORT))
+    print (  "[Connected as " + n.clientAddress(sendSocket)[0]
+           + ":" + str(n.clientAddress(sendSocket)[1]) + ".]")
     # Wait for user to type messages until user presses Ctrl-C, then quit.
     try:
         # dummyInputField(socket)
-        senderThread = thread.start_new_thread(sender, (sendSocket))
-        receiverThread = thread.start_new_thread(receiver, (receiveSocket))
+        senderThread = thread.start_new_thread(sender, (sendSocket,))
+        listenerThread = thread.start_new_thread(listener, (listenSocket,))
     finally:
-        socket.close()
+        sendSocket.close()
+        listenSocket.close()
         print "\n[Closing socket and quitting.]"
