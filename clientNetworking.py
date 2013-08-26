@@ -23,7 +23,10 @@ def listenConnect((HOST, PORT)):
 def sendString(string, sock):
     sock.sendall(string)
 
-def sendFromClient(serializedData, sock):
+def receiveString(sock):
+    return sock.recv(1024)
+
+def verifiedSend(serializedData, sock):
     try:
         sock.sendall(serializedData)
     except:
@@ -37,12 +40,6 @@ def sendFromClient(serializedData, sock):
 
     if received != serializedData:
         print "[Data was mangled between client and server!]"
-
-def receive(sock):
-    return sock.recv(1024)
-
-def pullMessageList():
-    pass
 
 def clientAddress(sock):
     return sock.getsockname()
