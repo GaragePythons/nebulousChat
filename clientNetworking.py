@@ -13,11 +13,12 @@ def connect((HOST, PORT)):
 def sendConnect((HOST, PORT)):
     sock = connect((HOST, PORT))
     sock.sendall("send")
-    return sock
+    serializedClientID = sock.recv(1024)
+    return (sock, serializedClientID)
 
-def listenConnect((HOST, PORT)):
+def listenConnect((HOST, PORT), serializedClientID):
     sock = connect((HOST, PORT))
-    sock.sendall("listen") 
+    sock.sendall("listen" + serializedClientID)
     return sock
 
 def sendString(string, sock):

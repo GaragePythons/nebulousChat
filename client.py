@@ -5,7 +5,7 @@ import Queue
 import threading
 import time
 
-connectInfos = ("localhost", 9999)
+connectInfos = ("localhost", 9998)
 
 def timestamp():
     return time.time()
@@ -28,13 +28,13 @@ def listener(sock):
 
 
 if __name__ == "__main__":
-    sendSocket = n.sendConnect(connectInfos)
+    (sendSocket, serializedClientID) = n.sendConnect(connectInfos)
     # Sleep: fudge so that the sender socket 
     # definitely gets opened first.
-    # Things WILL break if two clients connect
-    # within a second of each other.
-    time.sleep(1)
-    listenSocket = n.listenConnect(connectInfos)
+    # Things WON'T break if two clients connect
+    # within 0.1 seconds of each other.
+    time.sleep(0.1)
+    listenSocket = n.listenConnect(connectInfos, serializedClientID)
 
     print (  "[Sending on   " + n.clientAddress(sendSocket)[0]
            + ":" + str(n.clientAddress(sendSocket)[1]) + ";\n"

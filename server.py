@@ -12,7 +12,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
         if handleType == "send":
             self.server.counter += 1
-            handlerID = self.server.counter
+            clientID = self.server.counter
+            self.request.sendall(serialize(clientID))
 
             print(  "[" + self.client_address[0] + " connected.]")
 
@@ -30,15 +31,15 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 print query.__class__.__name__
                 server.queueForDistribution.put(query)
                 
-            print "[Client quit.]"
+            print "[Client " + str(clientID) + " quit.]"
 
         else:
-            assert handleType == "listen"
-            handlerID = self.server.counter
+            assert handleType[0:6] == "listen"
+            clientID = int(unserialize(handleType[6:]))
 
             while self.request.recv(1024) == "still here":
                 self.request.sendall(serialize(
-                    queueList[handlerID - 1].get()
+                    queueList[clientID - 1].get()
                     ))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -46,7 +47,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 9999
+    HOST, PORT = "localhost", 9998
 
     # Threading voodoo
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
