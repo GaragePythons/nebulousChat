@@ -46,7 +46,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 8000
+    HOST, PORT = "localhost", 9999
 
     # Threading voodoo
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
