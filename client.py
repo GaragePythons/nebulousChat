@@ -5,7 +5,7 @@ import Queue
 import threading
 import time
 
-connectInfos = ("localhost", 9999)
+connectInfos = ("87.113.227.196", 9999)
 
 def timestamp():
     return time.time()
