@@ -6,7 +6,7 @@ import Queue
 import threading
 import time
 
-HOST, PORT = "localhost", 9998
+connectInfos = ("localhost", 9999)
 
 keywords = [("nick")]
 
@@ -27,14 +27,16 @@ def sender(sock):
 
 def listener(sock):
     while True:
-        query = n.receive(sock)
+        n.sendString("still here", sock)
+        received = n.receive(sock)
+        query = unserialize(received)
         print "Received query"
-        print query.MessageString
+        print query.messageString
 
 
 if __name__ == "__main__":
     # Connect to server.
-    sendSocket = n.sendConnect((HOST, PORT))
+    sendSocket = n.sendConnect(connectInfos)
 
     # Fudge so that the sender socket 
     # definitely gets opened first.
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     # within a second of each other.
     time.sleep(1)
 
-    listenSocket = n.listenConnect((HOST, PORT))
+    listenSocket = n.listenConnect(connectInfos)
 
     print (  "[Sending on   " + n.clientAddress(sendSocket)[0]
            + ":" + str(n.clientAddress(sendSocket)[1]) + ";\n"
@@ -69,5 +71,5 @@ if __name__ == "__main__":
     
     signalToCloseSendSocket.get()
     sendSocket.close()
-    # listenSocket.close()
+    listenSocket.close()
     print "\n[Closing socket and quitting.]"

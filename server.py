@@ -39,12 +39,12 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             assert handleType == "listen"
             handlerID = self.server.counter
             print "handlerID of listen is " + str(handlerID)
-            print "[Client listening.]"
 
-            while True:
-                self.request.sendall(
-                    serialize(queueList[handlerID - 1].get())
-                    )
+            while self.request.recv(1024) == "still here":
+                print "Waiting for query"
+                query = queueList[handlerID - 1].get()
+                print "Got query"
+                self.request.sendall(serialize(query))
                 print "!"
 
 
@@ -52,7 +52,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 9998
+    HOST, PORT = "localhost", 9999
 
     # Threading voodoo
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)

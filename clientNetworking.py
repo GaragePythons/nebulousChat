@@ -20,6 +20,9 @@ def listenConnect((HOST, PORT)):
     sock.sendall("listen") 
     return sock
 
+def sendString(string, sock):
+    sock.sendall(string)
+
 def sendFromClient(serializedData, sock):
     try:
         sock.sendall(serializedData)
@@ -36,8 +39,7 @@ def sendFromClient(serializedData, sock):
         print "[Data was mangled between client and server!]"
 
 def receive(sock):
-    while True:
-        received = sock.recv(1024)
+    return sock.recv(1024)
 
 def pullMessageList():
     pass
