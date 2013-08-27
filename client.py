@@ -6,7 +6,7 @@ import threading
 import time
 import sys
 
-serverDetails = ("localhost", int(sys.argv[1]))
+serverDetails = (sys.argv[1], int(sys.argv[2]))
 
 def timestamp():
     return time.time()
