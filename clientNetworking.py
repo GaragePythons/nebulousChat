@@ -10,21 +10,21 @@ def connect((HOST, PORT)):
         print "[Connecting failed.]"
         raise
 
-def sendConnect((HOST, PORT)):
+def openSpeakPort((HOST, PORT)):
     sock = connect((HOST, PORT))
-    sock.sendall("send")
+    sock.sendall("speak")
     serializedClientID = sock.recv(1024)
     return (sock, serializedClientID)
 
-def listenConnect((HOST, PORT), serializedClientID):
+def openListenPort((HOST, PORT), serializedClientID):
     sock = connect((HOST, PORT))
     sock.sendall("listen" + serializedClientID)
     return sock
 
-def sendString(string, sock):
+def send(string, sock):
     sock.sendall(string)
 
-def receiveString(sock):
+def receive(sock):
     return sock.recv(1024)
 
 def verifiedSend(serializedData, sock):
@@ -42,5 +42,5 @@ def verifiedSend(serializedData, sock):
     if received != serializedData:
         print "[Data was mangled between client and server!]"
 
-def clientAddress(sock):
+def address(sock):
     return sock.getsockname()

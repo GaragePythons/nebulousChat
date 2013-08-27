@@ -3,43 +3,54 @@ import Queue
 import threading
 import thread
 import SocketServer
+import sys
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
+    # handle() handles incoming connections 
+    # whether they be speakers or listeners.
     def handle(self):
-        queueList = self.server.queueList
+        # socketType refers to whether the socket is a speaker 
+        # or listener from the _client's_ point of view.
+        socketType = self.request.recv(1024)
 
-        handleType = self.request.recv(1024)
-
-        if handleType == "send":
-            self.server.counter += 1
-            clientID = self.server.counter
+        if socketType == "speak":
+            # This is potentially bad if two clients 
+            # join at exactly the same time.
+            clientID = server.clientIDCounter
+            server.clientIDCounter += 1
+            # Tell the client its ID.
             self.request.sendall(serialize(clientID))
 
-            print(  "[" + self.client_address[0] + " connected.]")
+            print(  "[" + self.client_address[0] + " connected as client "
+                  + str(clientID) + ".]")
 
-            queueList.append(Queue.Queue())
+            # Create a queue corresponding to this client.
+            server.messages.append(Queue.Queue())
 
+            # Listen for verifiedSend() from client.
             while True:
-                # self.request is the TCP socket connected to the client.
-                data = self.request.recv(1024)
-                self.request.sendall(data)
+                serializedMessage = self.request.recv(1024)
+                self.request.sendall(serializedMessage)
                 
-                if data == "":
+                if serializedMessage == "":
                     break
 
-                query = unserialize(data)
-                print query.__class__.__name__
-                server.queueForDistribution.put(query)
+                message = unserialize(serializedMessage)
+                print message.__class__.__name__
+                server.distributionQueue.put(message)
                 
             print "[Client " + str(clientID) + " quit.]"
 
         else:
-            assert handleType[0:6] == "listen"
-            clientID = int(unserialize(handleType[6:]))
+            assert socketType[0:6] == "listen"
+            clientID = int(unserialize(socketType[6:]))
 
+            # While the client is still listening...
             while self.request.recv(1024) == "still here":
+                # ...send a message from the queue 
+                # corresponding to this client.
                 self.request.sendall(serialize(
-                    queueList[clientID - 1].get()
+                    server.messages[clientID].get()
                     ))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -47,25 +58,22 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 9998
+    HOST, PORT = "localhost", int(sys.argv[1])
 
-    # Threading voodoo
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
-    server.queueForDistribution = Queue.Queue()
-    server.queueList = []
-    server.counter = 0
-    # server.globalQueriesList = []
-    serverThread = threading.Thread(target=server.serve_forever)
-    serverThread.daemon = True
+    server.distributionQueue = Queue.Queue()
+    server.messages = []
+    server.clientIDCounter = 0
+    server.daemon = True
 
-    def distributeQueries():
+    def distributeMessages():
         while True:
-            query = server.queueForDistribution.get()
-            for queue in server.queueList:
-                queue.put(query)
+            message = server.distributionQueue.get()
+            for queue in server.messages:
+                queue.put(message)
 
     distributionThread = threading.Thread(
-        target=distributeQueries
+        target=distributeMessages
         )
     distributionThread.daemon = True
     distributionThread.start()

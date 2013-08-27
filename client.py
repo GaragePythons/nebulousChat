@@ -1,64 +1,64 @@
 from serializing import serialize, unserialize
-import queries as q
+import messages as m
 import clientNetworking as n
 import Queue
 import threading
 import time
+import sys
 
-connectInfos = ("localhost", 9998)
+serverDetails = ("localhost", int(sys.argv[1]))
 
 def timestamp():
     return time.time()
 
-def sender(sock):
-    try:
-        while True:
-            messageString = raw_input()
-            n.verifiedSend(
-                serialize(q.Message(messageString, timestamp())), sock
-                )
-    except KeyboardInterrupt:
-        signalToCloseSendSocket.put(1)
-
-def listener(sock):
+def speak(sock):
     while True:
-        n.sendString("still here", sock)
-        query = unserialize(n.receiveString(sock))
-        print query.messageString
+        msg = raw_input(" > ")
+        n.verifiedSend(
+            serialize(m.ChatMessage(msg, timestamp())), sock
+            )
+
+def listen(sock):
+    while True:
+        n.send("still here", sock)
+        message = unserialize(n.receive(sock))
+        print message
 
 
 if __name__ == "__main__":
-    (sendSocket, serializedClientID) = n.sendConnect(connectInfos)
+    (speakSocket, serializedClientID) = n.openSpeakPort(serverDetails)
     # Sleep: fudge so that the sender socket 
     # definitely gets opened first.
     # Things WON'T break if two clients connect
     # within 0.1 seconds of each other.
     time.sleep(0.1)
-    listenSocket = n.listenConnect(connectInfos, serializedClientID)
+    listenSocket = n.openListenPort(serverDetails, serializedClientID)
+    clientID = unserialize(serializedClientID)
 
-    print (  "[Sending on   " + n.clientAddress(sendSocket)[0]
-           + ":" + str(n.clientAddress(sendSocket)[1]) + ";\n"
-           + " Listening on " + n.clientAddress(listenSocket)[0]
-           + ":" + str(n.clientAddress(listenSocket)[1]) + ".]")
+    print (  "[  Sending on " + n.address(speakSocket)[0]
+           + ":" + str(n.address(speakSocket)[1]) + ";\n"
+           + " Listening on " + n.address(listenSocket)[0]
+           + ":" + str(n.address(listenSocket)[1]) 
+           + ".\n You are client " + str(clientID) + ".            ]")
 
-    signalToCloseSendSocket = Queue.Queue()
-    senderThread = threading.Thread(
-        target=sender, 
-        args=(sendSocket,)
+    speakThread = threading.Thread(
+        target=speak, 
+        args=(speakSocket,)
         )
-    senderThread.daemon = True
-    senderThread.start()
+    speakThread.daemon = True
+    speakThread.start()
 
     signalToCloseListenSocket = Queue.Queue()
-    listenerThread = threading.Thread(
-        target=listener, 
+    listenThread = threading.Thread(
+        target=listen, 
         args=(listenSocket,)
         )
-    listenerThread.daemon = True
-    listenerThread.start()
+    listenThread.daemon = True
+    listenThread.start()
 
-    
-    signalToCloseSendSocket.get()
-    sendSocket.close()
-    listenSocket.close()
-    print "\n[Closing socket and quitting.]"
+    try:
+        time.sleep(99999999999999)
+    finally:
+        speakSocket.close()
+        listenSocket.close()
+        print "\n[Closed sockets; quitting.]"
