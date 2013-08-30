@@ -1,8 +1,8 @@
 from serializing import serialize, unserialize
 import Queue
 import threading
-import thread
 import SocketServer
+import time
 import sys
 
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
@@ -54,6 +54,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                     ))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    daemon_threads = True
     pass
 
 
@@ -64,7 +65,6 @@ if __name__ == "__main__":
     server.distributionQueue = Queue.Queue()
     server.messages = []
     server.clientIDCounter = 0
-    server.daemon = True
 
     def distributeMessages():
         while True:
@@ -76,6 +76,11 @@ if __name__ == "__main__":
         target=distributeMessages
         )
     distributionThread.daemon = True
+
     distributionThread.start()
 
-    server.serve_forever()
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+
+    time.sleep(99999999999999)
