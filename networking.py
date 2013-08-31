@@ -1,23 +1,23 @@
 import socket
 
-def connect((HOST, PORT)):
+def connect((host, port)):
     try:
         sock = socket.socket()
         sock.bind(('', 0))
-        sock = socket.create_connection((HOST, PORT))
+        sock = socket.create_connection((host, port))
         return sock
     except:
         print "[Connecting failed.]"
         raise
 
-def openSpeakPort((HOST, PORT)):
-    sock = connect((HOST, PORT))
+def openSpeakPort((host, port)):
+    sock = connect((host, port))
     sock.sendall("speak")
     serializedClientID = sock.recv(1024)
     return (sock, serializedClientID)
 
-def openListenPort((HOST, PORT), serializedClientID):
-    sock = connect((HOST, PORT))
+def openListenPort((host, port), serializedClientID):
+    sock = connect((host, port))
     sock.sendall("listen" + serializedClientID)
     return sock
 
@@ -37,10 +37,21 @@ def verifiedSend(serializedData, sock):
         received = sock.recv(1024)
     except:
         print "[Confirmation of receipt not received from server.]"
-        raise
 
     if received != serializedData:
         print "[Data was mangled between client and server!]"
+
+def hearVerifiedSend(sock):
+    serializedMessage = sock.recv(1024)
+    
+    if serializedMessage == "":
+        return None
+    else:
+        sock.sendall(serializedMessage)
+        return serializedMessage
+
+def getMessageID(sock):
+    return recieve(sock)
 
 def address(sock):
     return sock.getsockname()

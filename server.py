@@ -1,43 +1,51 @@
 from serializing import serialize, unserialize
+from networking import verifiedSend, hearVerifiedSend
+import messages as m
+import trees
 import Queue
 import threading
 import SocketServer
 import time
 import sys
 
+def assignID(message):
+    pass
+
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     # handle() handles incoming connections 
     # whether they be speakers or listeners.
     def handle(self):
+
         # socketType refers to whether the socket is a speaker 
         # or listener from the _client's_ point of view.
         socketType = self.request.recv(1024)
 
         if socketType == "speak":
-            # This is potentially bad if two clients 
-            # join at exactly the same time.
+
+            # Should use a lock or something to ensure the following 
+            # two lines get executed by a single thread at a time.
             clientID = server.clientIDCounter
             server.clientIDCounter += 1
+
             # Tell the client its ID.
             self.request.sendall(serialize(clientID))
 
             print(  "[" + self.client_address[0] + " connected as client "
                   + str(clientID) + ".]")
-
             # Create a queue corresponding to this client.
             server.messages.append(Queue.Queue())
 
-            # Listen for verifiedSend() from client.
             while True:
-                serializedMessage = self.request.recv(1024)
-                self.request.sendall(serializedMessage)
-                
-                if serializedMessage == "":
+                serializedMessage = hearVerifiedSend(self.request)
+                if serializedMessage:
+                    message = unserialize(serializedMessage)
+                    print message.__class__.__name__
+                    server.distributionQueue.put(message)
+                    assignID(message)
+                    # Tell the server the messageID.
+                    # Put the message in the baseMessageTree.
+                else:
                     break
-
-                message = unserialize(serializedMessage)
-                print message.__class__.__name__
-                server.distributionQueue.put(message)
                 
             print "[Client " + str(clientID) + " quit.]"
 
@@ -59,28 +67,29 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", int(sys.argv[1])
+    HOST, PORT = "localhost", 9998 #int(sys.argv[1])
 
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     server.distributionQueue = Queue.Queue()
     server.messages = []
     server.clientIDCounter = 0
+    baseMessageTree = trees.MessageTree(None)
 
-    def distributeMessages():
+    def distributeMessage():
         while True:
             message = server.distributionQueue.get()
             for queue in server.messages:
                 queue.put(message)
 
     distributionThread = threading.Thread(
-        target=distributeMessages
+        target=distributeMessage
         )
     distributionThread.daemon = True
 
     distributionThread.start()
 
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
+    serverThread = threading.Thread(target=server.serve_forever)
+    serverThread.daemon = True
+    serverThread.start()
 
     time.sleep(99999999999999)
