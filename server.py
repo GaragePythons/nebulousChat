@@ -67,7 +67,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 9998 #int(sys.argv[1])
+    HOST, PORT = "localhost", int(sys.argv[1])
 
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     server.distributionQueue = Queue.Queue()
