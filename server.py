@@ -92,4 +92,5 @@ if __name__ == "__main__":
     serverThread.daemon = True
     serverThread.start()
 
-    time.sleep(99999999999999)
+    distributionThread.join()
+    serverThread.join()

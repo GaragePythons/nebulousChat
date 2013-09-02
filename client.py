@@ -61,7 +61,8 @@ if __name__ == "__main__":
     listenThread.start()
 
     try:
-        time.sleep(99999999999999)
+        speakThread.join()
+        listenThread.join()
     finally:
         speakSocket.close()
         listenSocket.close()
