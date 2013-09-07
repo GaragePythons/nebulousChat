@@ -2,6 +2,7 @@ from serializing import serialize, unserialize
 from networking import verifiedSend, hearVerifiedSend
 import messages as m
 import trees
+import signal
 import Queue
 import threading
 import SocketServer
@@ -92,5 +93,5 @@ if __name__ == "__main__":
     serverThread.daemon = True
     serverThread.start()
 
-    distributionThread.join()
-    serverThread.join()
+    signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))
+    signal.pause()
