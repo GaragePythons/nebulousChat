@@ -25,8 +25,10 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
             # Should use a lock or something to ensure the following 
             # two lines get executed by a single thread at a time.
+            clientIDLock.acquire()
             clientID = server.clientIDCounter
             server.clientIDCounter += 1
+            clientIDLock.release()
 
             # Tell the client its ID.
             self.request.sendall(serialize(clientID))
@@ -73,6 +75,7 @@ if __name__ == "__main__":
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     server.distributionQueue = Queue.Queue()
     server.messages = []
+    clientIDLock = threading.Lock()
     server.clientIDCounter = 0
     baseMessageTree = trees.MessageTree(None)
 
