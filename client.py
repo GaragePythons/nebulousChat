@@ -17,7 +17,7 @@ def speak(sock, message, clientID):
         newMessage = message.get()
         n.verifiedSend(serialize(newMessage), sock)
         # newMessage.ID = n.getMessageID(sock)
-        trees.append(newMessage, baseMessageTree)
+        # baseMessageTree.append(newMessage)
 
 
 def listen(sock):
