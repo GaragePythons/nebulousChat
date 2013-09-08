@@ -12,6 +12,6 @@ class MessageTree():
 
     def append(self, newMessageTree):
         parentID = newMessageTree.message.parentID
-        for subTree in messageTree.traverse():
+        for subTree in self.traverse():
             if parentID == subTree.message.ID:
                 subTree.children.append(newMessageTree)

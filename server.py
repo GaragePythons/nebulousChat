@@ -1,5 +1,5 @@
 from serializing import serialize, unserialize
-from networking import verifiedSend, hearVerifiedSend
+import networking as n
 import messages as m
 import trees
 import signal
@@ -9,9 +9,6 @@ import SocketServer
 import time
 import sys
 
-def assignID(message):
-    pass
-
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     # handle() handles incoming connections 
     # whether they be speakers or listeners.
@@ -19,19 +16,16 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
 
         # socketType refers to whether the socket is a speaker 
         # or listener from the _client's_ point of view.
-        socketType = self.request.recv(1024)
+        socketType = n.receive(self.request)
 
         if socketType == "speak":
-
-            # Should use a lock or something to ensure the following 
-            # two lines get executed by a single thread at a time.
-            clientIDLock.acquire()
+            server.clientIDLock.acquire()
             clientID = server.clientIDCounter
             server.clientIDCounter += 1
-            clientIDLock.release()
+            server.clientIDLock.release()
 
             # Tell the client its ID.
-            self.request.sendall(serialize(clientID))
+            n.send(self.request, serialize(clientID))
 
             print(  "[" + self.client_address[0] + " connected as client "
                   + str(clientID) + ".]")
@@ -39,14 +33,15 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             server.messages.append(Queue.Queue())
 
             while True:
-                serializedMessage = hearVerifiedSend(self.request)
+                serializedMessage = n.hearVerifiedSend(self.request)
                 if serializedMessage:
                     message = unserialize(serializedMessage)
                     print message.__class__.__name__
                     server.distributionQueue.put(message)
                     assignID(message)
-                    # Tell the server the messageID.
-                    # Put the message in the baseMessageTree.
+                    n.send(self.request, serialize(message.ID))
+                    newMessageTree = trees.MessageTree(message)
+                    server.baseMessageTree.append(newMessageTree)
                 else:
                     break
                 
@@ -57,10 +52,10 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             clientID = int(unserialize(socketType[6:]))
 
             # While the client is still listening...
-            while self.request.recv(1024) == "still here":
+            while n.receive(self.request) == "still here":
                 # ...send a message from the queue 
                 # corresponding to this client.
-                self.request.sendall(serialize(
+                n.send(self.request, serialize(
                     server.messages[clientID].get()
                     ))
 
@@ -75,9 +70,19 @@ if __name__ == "__main__":
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     server.distributionQueue = Queue.Queue()
     server.messages = []
-    clientIDLock = threading.Lock()
+    server.clientIDLock = threading.Lock()
     server.clientIDCounter = 0
-    baseMessageTree = trees.MessageTree(None)
+    server.messageIDLock = threading.Lock()
+    server.messageIDCounter = 0
+    server.baseMessageTree = trees.MessageTree(
+        m.Message(None, None, None, None))
+    server.baseMessageTree.message.ID = 0
+
+    def assignID(message):
+        server.messageIDLock.acquire()
+        server.messageIDCounter += 1
+        message.ID = server.messageIDCounter
+        server.messageIDLock.release()
 
     def distributeMessage():
         while True:

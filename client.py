@@ -15,14 +15,15 @@ def timestamp():
 def speak(sock, message, clientID):
     while True:
         newMessage = message.get()
-        n.verifiedSend(serialize(newMessage), sock)
-        # newMessage.ID = n.getMessageID(sock)
-        # baseMessageTree.append(newMessage)
+        n.verifiedSend(sock, serialize(newMessage))
+        newMessage.ID = unserialize(n.receive(sock))
+        newMessageTree = trees.MessageTree(newMessage)
+        baseMessageTree.append(newMessageTree)
 
 
 def listen(sock):
     while True:
-        n.send("still here", sock)
+        n.send(sock, "still here")
         message = unserialize(n.receive(sock))
         print message
 
@@ -43,7 +44,8 @@ if __name__ == "__main__":
            + ":" + str(n.address(listenSocket)[1]) 
            + ".\n You are client " + str(clientID) + ".            ]")
 
-    baseMessageTree = trees.MessageTree(None)
+    baseMessageTree = trees.MessageTree(m.Message(None, 0, None, None))
+    baseMessageTree.message.ID = 0
 
     message = Queue.Queue()
 
@@ -63,7 +65,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            msg = raw_input(" > ")
+            msg = raw_input()
             message.put(m.ChatMessage(0, clientID, timestamp(), msg))
     finally:
         speakSocket.close()

@@ -21,13 +21,13 @@ def openListenPort((host, port), serializedClientID):
     sock.sendall("listen" + serializedClientID)
     return sock
 
-def send(string, sock):
+def send(sock, string):
     sock.sendall(string)
 
 def receive(sock):
     return sock.recv(1024)
 
-def verifiedSend(serializedData, sock):
+def verifiedSend(sock, serializedData):
     try:
         sock.sendall(serializedData)
     except:
@@ -49,9 +49,6 @@ def hearVerifiedSend(sock):
     else:
         sock.sendall(serializedMessage)
         return serializedMessage
-
-def getMessageID(sock):
-    return recieve(sock)
 
 def address(sock):
     return sock.getsockname()
