@@ -7,8 +7,6 @@ import threading
 import time
 import sys
 
-SERVER_DETAILS = (sys.argv[1], int(sys.argv[2]))
-
 def timestamp():
     return time.time()
 
@@ -18,7 +16,7 @@ def speak(sock, message, clientID):
         n.send(sock, serialize(newMessage))
         newMessage.ID = unserialize(n.receive(sock))
         newMessageTree = trees.MessageTree(newMessage)
-        baseMessageTree.append(newMessageTree)
+        client.baseMessageTree.append(newMessageTree)
 
 
 def listen(sock):
@@ -27,47 +25,58 @@ def listen(sock):
         message = unserialize(n.receive(sock))
         print message
 
+class Client():
+    pass
 
-if __name__ == "__main__":
-    (speakSocket, serializedClientID) = n.openSpeakPort(SERVER_DETAILS)
+def bootClient(SERVER_DETAILS):
+    client = Client()
+    (client.speakSocket, serializedClientID) = n.openSpeakPort(SERVER_DETAILS)
     # Sleep: fudge so that the sender socket 
     # definitely gets opened first.
     # Things WON'T break if two clients connect
     # within 0.1 seconds of each other.
     time.sleep(0.1)
-    listenSocket = n.openListenPort(SERVER_DETAILS, serializedClientID)
-    clientID = unserialize(serializedClientID)
+    client.listenSocket = n.openListenPort(SERVER_DETAILS, serializedClientID)
+    client.ID = unserialize(serializedClientID)
 
-    print (  "[  Sending on " + n.address(speakSocket)[0]
-           + ":" + str(n.address(speakSocket)[1]) + ";\n"
-           + " Listening on " + n.address(listenSocket)[0]
-           + ":" + str(n.address(listenSocket)[1]) 
-           + ".\n You are client " + str(clientID) + ".            ]")
+    client.baseMessageTree = trees.MessageTree(m.Message(None, 0, None, None))
+    client.baseMessageTree.message.ID = 0
 
-    baseMessageTree = trees.MessageTree(m.Message(None, 0, None, None))
-    baseMessageTree.message.ID = 0
-
-    message = Queue.Queue()
+    client.message = Queue.Queue()
 
     speakThread = threading.Thread(
         target=speak, 
-        args=(speakSocket, message, clientID)
+        args=(client.speakSocket, client.message, client.ID)
         )
     speakThread.daemon = True
     speakThread.start()
 
     listenThread = threading.Thread(
         target=listen, 
-        args=(listenSocket,)
+        args=(client.listenSocket,)
         )
     listenThread.daemon = True
     listenThread.start()
 
+    return client
+
+
+if __name__ == "__main__":
+    SERVER_DETAILS = (sys.argv[1], int(sys.argv[2]))
+    client = bootClient(SERVER_DETAILS)
+
+    print (  "[  Sending on " + n.address(client.speakSocket)[0]
+           + ":" + str(n.address(client.speakSocket)[1]) + ";\n"
+           + " Listening on " + n.address(client.listenSocket)[0]
+           + ":" + str(n.address(client.listenSocket)[1]) 
+           + ".\n You are client " + str(client.ID) + ".            ]")
+
     try:
         while True:
             msg = raw_input()
-            message.put(m.ChatMessage(0, clientID, timestamp(), msg))
+            client.message.put(m.ChatMessage(
+                0, client.ID, timestamp(), msg))
     finally:
-        speakSocket.close()
-        listenSocket.close()
+        client.speakSocket.close()
+        client.listenSocket.close()
         print "[Closed sockets; quitting.]"

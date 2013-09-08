@@ -75,7 +75,7 @@ if __name__ == "__main__":
     server.messageIDLock = threading.Lock()
     server.messageIDCounter = 0
     server.baseMessageTree = trees.MessageTree(
-        m.Message(None, None, None, None))
+        m.Message(None, None, None, "My conversation subject"))
     server.baseMessageTree.message.ID = 0
 
     def assignID(message):
