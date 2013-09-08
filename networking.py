@@ -25,29 +25,10 @@ def send(sock, string):
     sock.sendall(string)
 
 def receive(sock):
-    return sock.recv(1024)
-
-def verifiedSend(sock, serializedData):
-    try:
-        sock.sendall(serializedData)
-    except:
-        print "[Could not send data.]"
-
-    try:
-        received = sock.recv(1024)
-    except:
-        print "[Confirmation of receipt not received from server.]"
-
-    if received != serializedData:
-        print "[Data was mangled between client and server!]"
-
-def hearVerifiedSend(sock):
     serializedMessage = sock.recv(1024)
-    
     if serializedMessage == "":
         return None
     else:
-        sock.sendall(serializedMessage)
         return serializedMessage
 
 def address(sock):

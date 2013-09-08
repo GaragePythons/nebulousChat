@@ -15,7 +15,7 @@ def timestamp():
 def speak(sock, message, clientID):
     while True:
         newMessage = message.get()
-        n.verifiedSend(sock, serialize(newMessage))
+        n.send(sock, serialize(newMessage))
         newMessage.ID = unserialize(n.receive(sock))
         newMessageTree = trees.MessageTree(newMessage)
         baseMessageTree.append(newMessageTree)
@@ -70,4 +70,4 @@ if __name__ == "__main__":
     finally:
         speakSocket.close()
         listenSocket.close()
-        print "\n[Closed sockets; quitting.]"
+        print "[Closed sockets; quitting.]"

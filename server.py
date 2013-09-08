@@ -33,7 +33,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             server.messages.append(Queue.Queue())
 
             while True:
-                serializedMessage = n.hearVerifiedSend(self.request)
+                serializedMessage = n.receive(self.request)
                 if serializedMessage:
                     message = unserialize(serializedMessage)
                     print message.__class__.__name__
