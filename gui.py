@@ -1,4 +1,5 @@
 from client import bootClient
+from parsing import hostTuple
 import wx
 
 class MainFrame(wx.Frame):
@@ -56,8 +57,7 @@ class MainFrame(wx.Frame):
         def connect():
             connectDialog = wx.TextEntryDialog(self, "Enter host:", "Connect")
             if connectDialog.ShowModal() == wx.ID_OK:
-                # parse: "domain.or.ip:port" -> (domain.or.ip, port)
-                client = bootClient(("localhost", 9999))
+                client = bootClient(hostTuple(connectDialog.GetValue()))
             connectDialog.Destroy()
             assert client
             return client
