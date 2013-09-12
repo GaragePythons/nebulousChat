@@ -1,5 +1,7 @@
 import socket
 
+RECV_SIZE = 16
+
 def connect((host, port)):
     try:
         sock = socket.socket()
@@ -12,24 +14,30 @@ def connect((host, port)):
 
 def openSpeakPort((host, port)):
     sock = connect((host, port))
-    sock.sendall("speak")
-    serializedClientID = sock.recv(1024)
+    send(sock, "speak")
+    serializedClientID = receive(sock)
     return (sock, serializedClientID)
 
 def openListenPort((host, port), serializedClientID):
     sock = connect((host, port))
-    sock.sendall("listen" + serializedClientID)
+    send(sock, "listen" + serializedClientID)
     return sock
 
-def send(sock, string):
-    sock.sendall(string)
+def send(sock, serializedMessage):
+    lenSerializedMessage = len(serializedMessage)
+    sock.sendall(str(len(serializedMessage)) + ':' + serializedMessage)
 
 def receive(sock):
-    serializedMessage = sock.recv(1024)
-    if serializedMessage == "":
+    serializedMessagePortion = sock.recv(RECV_SIZE)
+    if serializedMessagePortion == "":
         return None
-    else:
-        return serializedMessage
+    while not ":" in serializedMessagePortion:
+        serializedMessagePortion += sock.recv(RECV_SIZE)
+    lenSerializedMessage = int(serializedMessagePortion.split(":", 1)[0])
+    serializedMessagePortion = serializedMessagePortion.split(":", 1)[1]
+    while len(serializedMessagePortion) != lenSerializedMessage:
+        serializedMessagePortion += sock.recv(RECV_SIZE)
+    return serializedMessagePortion
 
 def address(sock):
     return sock.getsockname()
