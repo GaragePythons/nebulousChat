@@ -1,6 +1,9 @@
-from client import bootClient
+from client import bootClient, timestamp
 from parsing import hostTuple
+import trees as t
+import messages as m
 import wx
+import threading
 
 class MainFrame(wx.Frame):
 
@@ -25,30 +28,33 @@ class MainFrame(wx.Frame):
         self.tree.ExpandAll()
 
         self.tree.Bind(
-            wx.EVT_TREE_SEL_CHANGED, self.OnSelChanged, id=wx.ID_ANY)
+            wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
 
         nickStr = "GP"
+
         self.nickButton = wx.Button(
             self.panel, wx.ID_ANY, "<" + nickStr + ">")
         self.nickButton.Bind(
-            wx.EVT_BUTTON, self.OnNickButtonPress, id=wx.ID_ANY)
+            wx.EVT_BUTTON, 
+            lambda event: self.onNickButtonPress(event, nickStr), 
+            id=wx.ID_ANY)
 
         self.prompt = wx.TextCtrl(
             self.panel, style=wx.TE_PROCESS_ENTER)
-        self.prompt.Bind(wx.EVT_TEXT_ENTER, self.OnEnter)
+        self.prompt.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
         topSizer = wx.BoxSizer(wx.HORIZONTAL)
         bottomSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        topSizer.Add(self.tree, 1, wx.EXPAND, 5)
+        topSizer.Add(self.tree, 1, wx.EXPAND)
 
         bottomSizer.Add(self.nickButton, 0, wx.CENTRE)
         bottomSizer.Add(self.prompt, 1, wx.CENTRE)
 
         mainSizer.Add(topSizer, 1, wx.EXPAND)
-        mainSizer.Add(wx.StaticLine(self.panel,), 0, wx.ALL|wx.EXPAND, 5)
-        mainSizer.Add(bottomSizer, 0, wx.EXPAND, 5)
+        mainSizer.Add(wx.StaticLine(self.panel,), 0, wx.ALL|wx.EXPAND)
+        mainSizer.Add(bottomSizer, 0, wx.EXPAND)
 
         self.panel.SetSizer(mainSizer)
         topSizer.Fit(self)
@@ -56,6 +62,7 @@ class MainFrame(wx.Frame):
 
         def connect():
             connectDialog = wx.TextEntryDialog(self, "Enter host:", "Connect")
+            connectDialog.SetValue("localhost:9999")
             if connectDialog.ShowModal() == wx.ID_OK:
                 client = bootClient(hostTuple(connectDialog.GetValue()))
             connectDialog.Destroy()
@@ -64,20 +71,41 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
-    def OnNickButtonPress(self, event):
+        listenThread = threading.Thread(
+            target = self.listen,
+            args = (self.client,)
+            )
+        listenThread.daemon = True
+        listenThread.start()
+
+        self.prompt.SetFocus()
+
+    def onNickButtonPress(self, event, nickStr):
         nickDialog = wx.TextEntryDialog(
             self, "Enter your initials:", "Set initials")
         if nickDialog.ShowModal() == wx.ID_OK:
-            pass  # do stuff
+            nickStr = nickDialog.GetValue()
+            self.nickButton.SetLabel("<" + nickStr + ">")
         nickDialog.Destroy()
 
-    def OnSelChanged(self, event):
+    def onSelChanged(self, event):
         item = event.GetItem()
 
-    def OnEnter(self, event):
-        msg = self.prompt.GetValue()
+    def onEnter(self, event):
+        msg = str(self.prompt.GetValue())
+        self.client.messageIn.put(m.ChatMessage(
+                0, self.client.ID, timestamp(), msg))
         self.prompt.Clear()
-        self.tree.AppendItem(self.root, "<GP> " + msg)
+
+    def drawMessageTree(self, baseMessageTree):
+        print baseMessageTree.message.msg
+        self.root = self.tree.AddRoot(baseMessageTree.message.msg)
+
+    def listen(self, client):
+        while True:
+            # Wait until the client processes a message, then redraw the tree.
+            client.messageOut.get()
+            self.drawMessageTree(client.baseMessageTree)
 
 
 if __name__ == '__main__':

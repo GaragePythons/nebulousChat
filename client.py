@@ -10,20 +10,18 @@ import sys
 def timestamp():
     return time.time()
 
-def speak(sock, message, clientID):
+def speak(sock, client):
     while True:
-        newMessage = message.get()
+        newMessage = client.messageIn.get()
         n.send(sock, serialize(newMessage))
         newMessage.ID = unserialize(n.receive(sock))
         newMessageTree = trees.MessageTree(newMessage)
         client.baseMessageTree.append(newMessageTree)
 
-
-def listen(sock):
+def listen(sock, messageOut):
     while True:
         n.send(sock, "still here")
-        message = unserialize(n.receive(sock))
-        print message
+        messageOut.put(unserialize(n.receive(sock)))
 
 class Client():
     pass
@@ -39,21 +37,22 @@ def bootClient(SERVER_DETAILS):
     client.listenSocket = n.openListenPort(SERVER_DETAILS, serializedClientID)
     client.ID = unserialize(serializedClientID)
 
-    client.baseMessageTree = trees.MessageTree(m.Message(None, 0, None, None))
+    client.baseMessageTree = trees.MessageTree(m.Message(None, 0, None, "Conversation"))
     client.baseMessageTree.message.ID = 0
 
-    client.message = Queue.Queue()
+    client.messageIn = Queue.Queue()
+    client.messageOut = Queue.Queue()
 
     speakThread = threading.Thread(
         target=speak, 
-        args=(client.speakSocket, client.message, client.ID)
+        args=(client.speakSocket, client)
         )
     speakThread.daemon = True
     speakThread.start()
 
     listenThread = threading.Thread(
         target=listen, 
-        args=(client.listenSocket,)
+        args=(client.listenSocket, client.messageOut)
         )
     listenThread.daemon = True
     listenThread.start()
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     try:
         while True:
             msg = raw_input()
-            client.message.put(m.ChatMessage(
+            client.messageIn.put(m.ChatMessage(
                 0, client.ID, timestamp(), msg))
     finally:
         client.speakSocket.close()
