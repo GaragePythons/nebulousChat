@@ -6,9 +6,6 @@ class Message():
         self.msg = msg
 
 class ChatMessage(Message):
-    """ChatMessages have children but not parents - 
-    at least, not explicitly."""
-
     def __str__(self):
         return str(self.ID) + " > " + self.msg
 

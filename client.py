@@ -14,14 +14,14 @@ def speak(sock, client):
     while True:
         newMessage = client.messageIn.get()
         n.send(sock, serialize(newMessage))
-        newMessage.ID = unserialize(n.receive(sock))
-        newMessageTree = trees.MessageTree(newMessage)
-        client.baseMessageTree.append(newMessageTree)
 
-def listen(sock, messageOut):
+def listen(sock, client):
     while True:
         n.send(sock, "still here")
-        messageOut.put(unserialize(n.receive(sock)))
+        newMessage = unserialize(n.receive(sock))
+        newMessageTree = trees.MessageTree(newMessage)
+        client.baseMessageTree.append(newMessageTree)
+        client.messageTreeOut.put(newMessageTree)
 
 class Client():
     pass
@@ -40,8 +40,9 @@ def bootClient(SERVER_DETAILS):
     client.baseMessageTree = trees.MessageTree(m.Message(None, 0, None, "Conversation"))
     client.baseMessageTree.message.ID = 0
 
+    # "In" = "in from server"; "Out" = "out to GUI"
     client.messageIn = Queue.Queue()
-    client.messageOut = Queue.Queue()
+    client.messageTreeOut = Queue.Queue()
 
     speakThread = threading.Thread(
         target=speak, 
@@ -52,7 +53,7 @@ def bootClient(SERVER_DETAILS):
 
     listenThread = threading.Thread(
         target=listen, 
-        args=(client.listenSocket, client.messageOut)
+        args=(client.listenSocket, client)
         )
     listenThread.daemon = True
     listenThread.start()

@@ -97,15 +97,15 @@ class MainFrame(wx.Frame):
                 0, self.client.ID, timestamp(), msg))
         self.prompt.Clear()
 
-    def drawMessageTree(self, baseMessageTree):
-        print baseMessageTree.message.msg
-        self.root = self.tree.AddRoot(baseMessageTree.message.msg)
+    def drawMessageTree(self, newMessageTree, baseMessageTree):
+        # Draws newMessageTree in the context of baseMessageTree.
+        print "Draw that!"
 
     def listen(self, client):
         while True:
             # Wait until the client processes a message, then redraw the tree.
-            client.messageOut.get()
-            self.drawMessageTree(client.baseMessageTree)
+            newMessageTree = client.messageTreeOut.get()
+            self.drawMessageTree(newMessageTree, client.baseMessageTree)
 
 
 if __name__ == '__main__':
