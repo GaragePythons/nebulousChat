@@ -4,6 +4,7 @@ import trees as t
 import messages as m
 import wx
 import threading
+import time
 
 class MainFrame(wx.Frame):
 
@@ -20,13 +21,6 @@ class MainFrame(wx.Frame):
             self.panel, wx.ID_ANY, wx.DefaultPosition, 
             (-1,-1), wx.TR_HAS_BUTTONS|wx.TR_HAS_VARIABLE_ROW_HEIGHT|
             wx.TR_NO_LINES)
-        self.root = self.graph.AddRoot("<" + dummyAddress + "> First ever nebC conversation!")
-
-        self.graphNodes = {0: self.root}
-        self.invGraphNodes = {self.root: 0}
-
-        self.graph.Bind(
-            wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
 
         nickStr = "GP"
 
@@ -69,6 +63,13 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
+        self.root = self.graph.AddRoot(self.client.baseMessageTree.message.txt)
+
+        self.graphNodes = {0: self.root}
+
+        self.graph.Bind(
+            wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
+
         listenThread = threading.Thread(
             target = self.listen,
             args = (self.client,)
@@ -77,6 +78,7 @@ class MainFrame(wx.Frame):
         listenThread.start()
 
         self.prompt.SetFocus()
+        self.prompt.Bind(wx.EVT_SET_FOCUS, self.onFocus)
 
     class Graph(wx.TreeCtrl):
         pass
@@ -91,34 +93,40 @@ class MainFrame(wx.Frame):
 
     def onSelChanged(self, event):
         self.replyBranchID = self.graph.GetPyData(event.GetItem())
+        self.setFocusToPrompt()
+
+    def setFocusToPrompt(self):
+        self.prompt.SetFocus()
+
+    def onFocus(self, event):
+        print "prompt received focus... supposedly"
 
     def onEnter(self, event):
-        msg = str(self.prompt.GetValue())
+        txt = str(self.prompt.GetValue())
         self.client.messageIn.put(m.ChatMessage(
-                self.replyBranchID, self.client.ID, timestamp(), msg))
+                self.replyBranchID, self.client.ID, timestamp(), txt))
         self.prompt.Clear()
 
     def drawMessageTree(self, newMessageTree, isBaseMessageTree=False):
         if isBaseMessageTree:
-            print "Drawing base: "
-            self.graphRoot = self.graph.AddRoot("First ever nebC conversation!")
+            print "Drawing base"
             for messageTree in newMessageTree.children:
                 self.drawMessageTree(messageTree)
         else:
             for messageTree in newMessageTree.traverse():
-                print "Drawing message " + messageTree.message.msg
+                print "Drawing message " + messageTree.message.txt
                 self.graphNodes[messageTree.message.ID] = \
                     self.graph.AppendItem(
                         self.graphNodes[messageTree.message.parentID], 
-                        messageTree.message.msg
+                        messageTree.message.txt
                         )
                 # Associate the message ID with its node in the graph.
                 self.graph.SetPyData(
                     self.graphNodes[messageTree.message.ID],
                     messageTree.message.ID
                     )
-        self.graph.ExpandAll()
-        self.graph.ScrollTo(self.graphNodes[messageTree.message.ID])
+            self.graph.ExpandAll()
+            self.graph.ScrollTo(self.graphNodes[newMessageTree.message.ID])
 
 
     def listen(self, client):
@@ -126,7 +134,6 @@ class MainFrame(wx.Frame):
         while True:
             # Wait until the client processes a message, then redraw the graph.
             newMessageTree = client.messageTreeOut.get()
-            print "Got to here..."
             self.drawMessageTree(newMessageTree)
 
 

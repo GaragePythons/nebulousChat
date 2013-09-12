@@ -1,14 +1,14 @@
 class Message():
-    def __init__(self, parentID, clientID, timestamp, msg):
+    def __init__(self, parentID, clientID, timestamp, txt):
         self.parentID = parentID
         self.clientID = clientID
         self.timestamp = timestamp
-        self.msg = msg
+        self.txt = txt
         # messages also get given an ID by the server.
 
 class ChatMessage(Message):
     def __str__(self):
-        return str(self.ID) + " > " + self.msg
+        return str(self.ID) + " > " + self.txt
 
     def printWithContext():
         print "> " + self.parent + ";\n" + self;

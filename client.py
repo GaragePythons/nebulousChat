@@ -73,9 +73,9 @@ if __name__ == "__main__":
 
     try:
         while True:
-            msg = raw_input()
+            txt = raw_input()
             client.messageIn.put(m.ChatMessage(
-                0, client.ID, timestamp(), msg))
+                0, client.ID, timestamp(), txt))
     finally:
         client.speakSocket.close()
         client.listenSocket.close()

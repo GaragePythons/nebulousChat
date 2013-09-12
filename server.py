@@ -37,7 +37,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 if serializedMessage:
                     message = unserialize(serializedMessage)
                     print (  message.__class__.__name__ 
-                           + ": " + message.msg)
+                           + ": " + message.txt)
                     assignID(message)
                     server.distributionQueue.put(message)
                     newMessageTree = trees.MessageTree(message)
@@ -67,7 +67,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", int(sys.argv[1])
+    HOST, PORT = "", int(sys.argv[1])
 
     server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
     server.distributionQueue = Queue.Queue()
