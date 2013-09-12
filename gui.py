@@ -34,6 +34,7 @@ class MainFrame(wx.Frame):
         self.prompt = wx.TextCtrl(
             self.panel, style=wx.TE_PROCESS_ENTER)
         self.prompt.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
+        self.prompt.Bind(wx.EVT_KILL_FOCUS, self.onLoseFocus)
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
         topSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -68,7 +69,7 @@ class MainFrame(wx.Frame):
         self.graphNodes = {0: self.root}
 
         self.graph.Bind(
-            wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
+            wx.EVT_TREE_ITEM_ACTIVATED, self.onSelChanged, id=wx.ID_ANY)
 
         listenThread = threading.Thread(
             target = self.listen,
@@ -100,6 +101,9 @@ class MainFrame(wx.Frame):
 
     def onFocus(self, event):
         print "prompt received focus... supposedly"
+
+    def onLoseFocus(self, event):
+        print "lost focus"
 
     def onEnter(self, event):
         txt = str(self.prompt.GetValue())
