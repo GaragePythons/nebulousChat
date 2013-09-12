@@ -8,6 +8,7 @@ import threading
 class MainFrame(wx.Frame):
 
     def __init__(self):
+        self.replyBranchID = 0
         wx.Frame.__init__(self, None, wx.ID_ANY, title='nebulousChat')
 
         # Add a panel so it looks correct on all platforms
@@ -15,15 +16,16 @@ class MainFrame(wx.Frame):
 
         dummyAddress = "123.45.67.89:9999"
 
-        self.tree = wx.TreeCtrl(
+        self.graph = self.Graph(
             self.panel, wx.ID_ANY, wx.DefaultPosition, 
             (-1,-1), wx.TR_HAS_BUTTONS|wx.TR_HAS_VARIABLE_ROW_HEIGHT|
             wx.TR_NO_LINES)
-        self.root = self.tree.AddRoot("<" + dummyAddress + "> First ever nebC conversation!")
+        self.root = self.graph.AddRoot("<" + dummyAddress + "> First ever nebC conversation!")
 
         self.graphNodes = {0: self.root}
+        self.invGraphNodes = {self.root: 0}
 
-        self.tree.Bind(
+        self.graph.Bind(
             wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
 
         nickStr = "GP"
@@ -43,7 +45,7 @@ class MainFrame(wx.Frame):
         topSizer = wx.BoxSizer(wx.HORIZONTAL)
         bottomSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        topSizer.Add(self.tree, 1, wx.EXPAND)
+        topSizer.Add(self.graph, 1, wx.EXPAND)
 
         bottomSizer.Add(self.nickButton, 0, wx.CENTRE)
         bottomSizer.Add(self.prompt, 1, wx.CENTRE)
@@ -76,6 +78,9 @@ class MainFrame(wx.Frame):
 
         self.prompt.SetFocus()
 
+    class Graph(wx.TreeCtrl):
+        pass
+
     def onNickButtonPress(self, event, nickStr):
         nickDialog = wx.TextEntryDialog(
             self, "Enter your initials:", "Set initials")
@@ -85,28 +90,33 @@ class MainFrame(wx.Frame):
         nickDialog.Destroy()
 
     def onSelChanged(self, event):
-        item = event.GetItem()
+        self.replyBranchID = self.graph.GetPyData(event.GetItem())
 
     def onEnter(self, event):
         msg = str(self.prompt.GetValue())
         self.client.messageIn.put(m.ChatMessage(
-                0, self.client.ID, timestamp(), msg))
+                self.replyBranchID, self.client.ID, timestamp(), msg))
         self.prompt.Clear()
 
     def drawMessageTree(self, newMessageTree):
-        print "Draw that!"
         for messageTree in newMessageTree.traverse():
             self.graphNodes[messageTree.message.ID] = \
-                self.tree.AppendItem(
+                self.graph.AppendItem(
                     self.graphNodes[messageTree.message.parentID], 
                     messageTree.message.msg
                     )
-        self.tree.ExpandAll()
+            # Associate the message ID with its node in the graph.
+            self.graph.SetPyData(
+                self.graphNodes[messageTree.message.ID],
+                messageTree.message.ID
+                )
+        self.graph.ExpandAll()
+        self.graph.ScrollTo(self.graphNodes[messageTree.message.ID])
 
 
     def listen(self, client):
         while True:
-            # Wait until the client processes a message, then redraw the tree.
+            # Wait until the client processes a message, then redraw the graph.
             newMessageTree = client.messageTreeOut.get()
             self.drawMessageTree(newMessageTree)
 
