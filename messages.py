@@ -4,6 +4,7 @@ class Message():
         self.clientID = clientID
         self.timestamp = timestamp
         self.msg = msg
+        # messages also get given an ID by the server.
 
 class ChatMessage(Message):
     def __str__(self):

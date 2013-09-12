@@ -20,12 +20,8 @@ class MainFrame(wx.Frame):
             (-1,-1), wx.TR_HAS_BUTTONS|wx.TR_HAS_VARIABLE_ROW_HEIGHT|
             wx.TR_NO_LINES)
         self.root = self.tree.AddRoot("<" + dummyAddress + "> First ever nebC conversation!")
-        self.firstReply = self.tree.AppendItem(self.root, "<GP> This is the first ever reply.\nIt contains a newline.")
-        self.secondReply = self.tree.AppendItem(self.firstReply, "<AB> nebulousChat is shit. This reply is a particularly long one, with many characters.")
-        self.thirdReply = self.tree.AppendItem(self.root, "<CD> Another reply to the subject.")
-        self.fourthReply = self.tree.AppendItem(self.firstReply, "<GP> Obligatory reply acknowledging that nebC is shit.")
 
-        self.tree.ExpandAll()
+        self.graphNodes = {0: self.root}
 
         self.tree.Bind(
             wx.EVT_TREE_SEL_CHANGED, self.onSelChanged, id=wx.ID_ANY)
@@ -97,15 +93,22 @@ class MainFrame(wx.Frame):
                 0, self.client.ID, timestamp(), msg))
         self.prompt.Clear()
 
-    def drawMessageTree(self, newMessageTree, baseMessageTree):
-        # Draws newMessageTree in the context of baseMessageTree.
+    def drawMessageTree(self, newMessageTree):
         print "Draw that!"
+        for messageTree in newMessageTree.traverse():
+            self.graphNodes[messageTree.message.ID] = \
+                self.tree.AppendItem(
+                    self.graphNodes[messageTree.message.parentID], 
+                    messageTree.message.msg
+                    )
+        self.tree.ExpandAll()
+
 
     def listen(self, client):
         while True:
             # Wait until the client processes a message, then redraw the tree.
             newMessageTree = client.messageTreeOut.get()
-            self.drawMessageTree(newMessageTree, client.baseMessageTree)
+            self.drawMessageTree(newMessageTree)
 
 
 if __name__ == '__main__':
