@@ -51,6 +51,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             assert socketType[0:6] == "listen"
             clientID = int(unserialize(socketType[6:]))
 
+            n.send(self.request, serialize(server.baseMessageTree))
+
             # While the client is still listening...
             while n.receive(self.request) == "still here":
                 # ...send a message from the queue 

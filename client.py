@@ -37,7 +37,7 @@ def bootClient(SERVER_DETAILS):
     client.listenSocket = n.openListenPort(SERVER_DETAILS, serializedClientID)
     client.ID = unserialize(serializedClientID)
 
-    client.baseMessageTree = trees.MessageTree(m.Message(None, 0, None, "Conversation"))
+    client.baseMessageTree = unserialize(n.receive(client.listenSocket))
     client.baseMessageTree.message.ID = 0
 
     # "In" = "in from server"; "Out" = "out to GUI"

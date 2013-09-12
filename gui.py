@@ -98,26 +98,35 @@ class MainFrame(wx.Frame):
                 self.replyBranchID, self.client.ID, timestamp(), msg))
         self.prompt.Clear()
 
-    def drawMessageTree(self, newMessageTree):
-        for messageTree in newMessageTree.traverse():
-            self.graphNodes[messageTree.message.ID] = \
-                self.graph.AppendItem(
-                    self.graphNodes[messageTree.message.parentID], 
-                    messageTree.message.msg
+    def drawMessageTree(self, newMessageTree, isBaseMessageTree=False):
+        if isBaseMessageTree:
+            print "Drawing base: "
+            self.graphRoot = self.graph.AddRoot("First ever nebC conversation!")
+            for messageTree in newMessageTree.children:
+                self.drawMessageTree(messageTree)
+        else:
+            for messageTree in newMessageTree.traverse():
+                print "Drawing message " + messageTree.message.msg
+                self.graphNodes[messageTree.message.ID] = \
+                    self.graph.AppendItem(
+                        self.graphNodes[messageTree.message.parentID], 
+                        messageTree.message.msg
+                        )
+                # Associate the message ID with its node in the graph.
+                self.graph.SetPyData(
+                    self.graphNodes[messageTree.message.ID],
+                    messageTree.message.ID
                     )
-            # Associate the message ID with its node in the graph.
-            self.graph.SetPyData(
-                self.graphNodes[messageTree.message.ID],
-                messageTree.message.ID
-                )
         self.graph.ExpandAll()
         self.graph.ScrollTo(self.graphNodes[messageTree.message.ID])
 
 
     def listen(self, client):
+        self.drawMessageTree(client.baseMessageTree, True)
         while True:
             # Wait until the client processes a message, then redraw the graph.
             newMessageTree = client.messageTreeOut.get()
+            print "Got to here..."
             self.drawMessageTree(newMessageTree)
 
 
