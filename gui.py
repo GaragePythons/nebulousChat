@@ -36,6 +36,12 @@ class MainFrame(wx.Frame):
         self.prompt.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
         self.prompt.Bind(wx.EVT_KILL_FOCUS, self.onLoseFocus)
 
+        self.multilineInputButton = wx.Button(
+            self.panel, wx.ID_ANY, "Multi-line input...")
+        self.multilineInputButton.Bind(wx.EVT_BUTTON,
+            lambda event: self.onMultilineInputButtonPress(event)
+            )
+
         mainSizer = wx.BoxSizer(wx.VERTICAL)
         topSizer = wx.BoxSizer(wx.HORIZONTAL)
         bottomSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -44,6 +50,7 @@ class MainFrame(wx.Frame):
 
         bottomSizer.Add(self.nickButton, 0, wx.CENTRE)
         bottomSizer.Add(self.prompt, 1, wx.CENTRE)
+        bottomSizer.Add(self.multilineInputButton, 0, wx.CENTRE)
 
         mainSizer.Add(topSizer, 1, wx.EXPAND)
         mainSizer.Add(wx.StaticLine(self.panel,), 0, wx.ALL|wx.EXPAND)
@@ -51,7 +58,7 @@ class MainFrame(wx.Frame):
 
         self.panel.SetSizer(mainSizer)
         topSizer.Fit(self)
-        self.SetSize(wx.Size(800,600))
+        self.SetSize(wx.Size(600,600))
 
         def connect():
             connectDialog = wx.TextEntryDialog(self, "Enter host:", "Connect")
@@ -65,6 +72,7 @@ class MainFrame(wx.Frame):
         self.client = connect()
 
         self.root = self.graph.AddRoot(self.client.baseMessageTree.message.txt)
+        self.graph.SetPyData(self.root, 0)
 
         self.graphNodes = {0: self.root}
 
@@ -81,6 +89,28 @@ class MainFrame(wx.Frame):
         self.prompt.SetFocus()
         self.prompt.Bind(wx.EVT_SET_FOCUS, self.onFocus)
 
+    class TextEntryDialog(wx.Dialog):
+        def __init__(self, parent, title, caption):
+            style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+            super(type(self), self).__init__(parent, -1, title, style=style)
+            text = wx.StaticText(self, -1, caption)
+            input = wx.TextCtrl(self, -1, style=wx.TE_MULTILINE)
+            input.SetInitialSize((400, 300))
+            buttons = self.CreateButtonSizer(wx.OK|wx.CANCEL)
+            sizer = wx.BoxSizer(wx.VERTICAL)
+            sizer.Add(text, 0, wx.ALL, 5)
+            sizer.Add(input, 1, wx.EXPAND|wx.ALL, 5)
+            sizer.Add(buttons, 0, wx.EXPAND|wx.ALL, 5)
+            self.SetSizerAndFit(sizer)
+            self.input = input
+        def SetValue(self, value):
+            self.input.SetValue(value)
+        def GetValue(self):
+            return self.input.GetValue()
+        def SetFocus(self):
+            self.input.SetSelection(-1,-1)
+            self.input.SetFocus()
+
     class Graph(wx.TreeCtrl):
         pass
 
@@ -91,6 +121,18 @@ class MainFrame(wx.Frame):
             nickStr = nickDialog.GetValue()
             self.nickButton.SetLabel("<" + nickStr + ">")
         nickDialog.Destroy()
+        self.prompt.SetFocus()
+
+    def onMultilineInputButtonPress(self, event):
+        multilineInputDialog = self.TextEntryDialog(
+            self, "Multi-line input", ""
+            )
+        multilineInputDialog.SetValue(self.prompt.GetValue())
+        multilineInputDialog.SetFocus()
+        if multilineInputDialog.ShowModal() == wx.ID_OK:
+            self.prompt.SetValue(multilineInputDialog.GetValue())
+        multilineInputDialog.Destroy()
+        self.prompt.SetFocus()
 
     def onSelChanged(self, event):
         self.replyBranchID = self.graph.GetPyData(event.GetItem())
@@ -100,7 +142,7 @@ class MainFrame(wx.Frame):
         self.prompt.SetFocus()
 
     def onFocus(self, event):
-        print "prompt received focus... supposedly"
+        print "prompt received focus"
 
     def onLoseFocus(self, event):
         print "lost focus"
@@ -123,6 +165,17 @@ class MainFrame(wx.Frame):
                     self.graph.AppendItem(
                         self.graphNodes[messageTree.message.parentID], 
                         messageTree.message.txt
+                        )
+                if "\n" in messageTree.message.txt:
+                    print "Setting fixed font on " + messageTree.message.txt
+                    self.graph.SetItemFont(
+                        self.graphNodes[messageTree.message.ID],
+                        wx.Font(
+                            10,
+                            wx.FONTFAMILY_MODERN,
+                            1,
+                            self.graph.GetItemFont(self.root).GetWeight()
+                            )
                         )
                 # Associate the message ID with its node in the graph.
                 self.graph.SetPyData(
