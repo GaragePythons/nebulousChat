@@ -37,7 +37,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 if serializedMessage:
                     message = unserialize(serializedMessage)
                     print (  message.__class__.__name__ 
-                           + ": " + message.txt)
+                           + ": " + str(message))
                     assignID(message)
                     server.distributionQueue.put(message)
                     newMessageTree = trees.MessageTree(message)

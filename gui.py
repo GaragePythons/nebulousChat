@@ -15,8 +15,6 @@ class MainFrame(wx.Frame):
         # Add a panel so it looks correct on all platforms
         self.panel = wx.Panel(self, wx.ID_ANY)
 
-        dummyAddress = "123.45.67.89:9999"
-
         self.graph = self.Graph(
             self.panel, wx.ID_ANY, wx.DefaultPosition, 
             (-1,-1), wx.TR_HAS_BUTTONS|wx.TR_HAS_VARIABLE_ROW_HEIGHT|
@@ -71,7 +69,7 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
-        self.root = self.graph.AddRoot(self.client.baseMessageTree.message.txt)
+        self.root = self.graph.AddRoot(str(self.client.baseMessageTree.message))
         self.graph.SetPyData(self.root, 0)
 
         self.graphNodes = {0: self.root}
@@ -160,14 +158,16 @@ class MainFrame(wx.Frame):
                 self.drawMessageTree(messageTree)
         else:
             for messageTree in newMessageTree.traverse():
-                print "Drawing message " + messageTree.message.txt
+                print (  "Drawing message from client " 
+                       + str(messageTree.message.clientID) + ": "
+                       + str(messageTree.message))
                 self.graphNodes[messageTree.message.ID] = \
                     self.graph.AppendItem(
                         self.graphNodes[messageTree.message.parentID], 
-                        messageTree.message.txt
+                        str(messageTree.message)
                         )
-                if "\n" in messageTree.message.txt:
-                    print "Setting fixed font on " + messageTree.message.txt
+                if "\n" in str(messageTree.message):
+                    print "Setting fixed font on " + str(messageTree.message)
                     self.graph.SetItemFont(
                         self.graphNodes[messageTree.message.ID],
                         wx.Font(

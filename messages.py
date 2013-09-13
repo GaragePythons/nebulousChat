@@ -6,13 +6,11 @@ class Message():
         self.txt = txt
         # messages also get given an ID by the server.
 
-class ChatMessage(Message):
     def __str__(self):
-        return str(self.ID) + " > " + self.txt
+        return self.txt
 
-    def printWithContext():
-        print "> " + self.parent + ";\n" + self;
+class ChatMessage(Message):
+    pass
 
 class SetNick(Message):
-    def __str__():
-        return self.str
+    pass
