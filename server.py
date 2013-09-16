@@ -36,8 +36,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 serializedMessage = n.receive(self.request)
                 if serializedMessage:
                     message = unserialize(serializedMessage)
-                    print (  message.__class__.__name__ 
-                           + ": " + str(message))
+                    print (  "[" + message.__class__.__name__ 
+                           + ": " + str(message) + "]")
                     assignID(message)
                     server.distributionQueue.put(message)
                     newMessageTree = trees.MessageTree(message)
@@ -92,15 +92,59 @@ if __name__ == "__main__":
             for queue in server.messages:
                 queue.put(message)
 
+    def writeMessageTreeToFile(filename):
+        file = open(filename, "w")
+        file.write(serialize(server.baseMessageTree))
+        file.close()
+
+    def writeOnRequest():
+        while True:
+            if raw_input() == "write":
+                writeMessageTreeToFile(".messages")
+                print "[Wrote entire message tree to .messages.]"
+            else:
+                print (  "[Please enter a valid command. " 
+                       + "Currently the only valid command is \"write\".]")
+
+    def initializeServerControl():
+        try:
+            with open(".messages", "r") as file:
+                print (  "[File exists at .messages. "
+                       + "Attempt to load the message tree? (y/n)]")
+                def queryForImport():
+                    response = raw_input()
+                    if response == "y":
+                        server.baseMessageTree = unserialize(file.read())
+                        print "[Read message tree from .messages; proceeding.]"
+                    elif response == "n":
+                        print "[Proceeding without importing from .messages.]"
+                    else:
+                        print "[y/n]"
+                        queryForImport()
+                queryForImport()
+                # The with statement closes the file.
+        except IOError:
+            print "[Nothing found at .messages; proceeding.]"
+
+    initializeServerControl()
+
+    serverControlThread = threading.Thread(
+        target=writeOnRequest
+        )
+    serverControlThread.daemon = True
+    serverControlThread.start()
+
     distributionThread = threading.Thread(
         target=distributeMessage
         )
     distributionThread.daemon = True
-
     distributionThread.start()
 
-    serverThread = threading.Thread(target=server.serve_forever)
+    serverThread = threading.Thread(
+        target=server.serve_forever
+        )
     serverThread.daemon = True
+    print "[Listening...]"
     serverThread.start()
 
     signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(0))

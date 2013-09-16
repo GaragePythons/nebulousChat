@@ -140,10 +140,10 @@ class MainFrame(wx.Frame):
         self.prompt.SetFocus()
 
     def onFocus(self, event):
-        print "prompt received focus"
+        pass
 
     def onLoseFocus(self, event):
-        print "lost focus"
+        pass
 
     def onEnter(self, event):
         txt = str(self.prompt.GetValue())
