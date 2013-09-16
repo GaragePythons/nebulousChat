@@ -103,9 +103,10 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
-        twoCharTuple = self.twoCharTuples.next()
+        self.twoCharTuple = self.twoCharTuples.next()
         self.root = self.graph.AddRoot(  "Server<" 
-                                       + twoCharTuple[0] + twoCharTuple[1] + ">  "
+                                       + self.twoCharTuple[0] 
+                                       + self.twoCharTuple[1] + ">  "
                                        + str(self.client.baseMessageTree.message)
                                       )
         self.graph.SetPyData(self.root, 0)
@@ -120,10 +121,12 @@ class MainFrame(wx.Frame):
             4: "Errol",
             5: "Flynn"
         }
-        self.twoCharStrings = {0: twoCharTuple[0] + twoCharTuple[1]}
+        self.twoCharStrings = {0: self.twoCharTuple[0] + self.twoCharTuple[1]}
 
         self.graph.Bind(
             wx.EVT_TREE_ITEM_ACTIVATED, self.onSelChanged, id=wx.ID_ANY)
+
+        self.reprintBranchSelectorText()
 
         listenThread = threading.Thread(
             target = self.listen,
@@ -209,11 +212,18 @@ class MainFrame(wx.Frame):
 # BRANCH SELECTOR FUNCTIONS
 
     def onBranchSelectorEnter(self, event):
-        newBranch = self.branchSelector.GetValue()
+        newBranchTwoCharString = self.branchSelector.GetValue()
         self.branchSelector.SetValue(  "branch " 
                                      + self.twoCharStrings[self.replyBranchID])
-
-        self.setFocusToPrompt()
+        self.replyBranchIDDict = \
+            dict((v,k) for k,v in self.twoCharStrings.items())
+        try:
+            self.replyBranchID = self.replyBranchIDDict[newBranchTwoCharString]
+        except KeyError:
+            print "Invalid key; reply branch unchanged."
+        finally:
+            self.reprintBranchSelectorText()
+            self.setFocusToPrompt()
 
     def reprintBranchSelectorText(self):
         self.branchSelector.SetValue(  "branch " 
@@ -260,11 +270,10 @@ class MainFrame(wx.Frame):
             self.graph.ScrollTo(self.graphNodes[newMessageTree.message.ID])
 
     def assignTwoCharStrings(self, newMessageTree):
-        print "Doing shit!"
         for messageTree in newMessageTree.traverse():
-            twoCharTuple = self.twoCharTuples.next()
             self.twoCharStrings[messageTree.message.ID] = \
-                twoCharTuple[0] + twoCharTuple[1]
+                self.twoCharTuple[0] + self.twoCharTuple[1]
+            self.twoCharTuple = self.twoCharTuples.next()
 
 
     def listen(self, client):
