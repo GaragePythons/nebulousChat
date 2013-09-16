@@ -9,7 +9,26 @@ import time
 class MainFrame(wx.Frame):
 
     def __init__(self):
-        self.replyBranchID = 0
+
+# FONTS
+
+        self.fixed = wx.Font(
+            10,                     # size
+            wx.FONTFAMILY_MODERN,   # family
+            wx.NORMAL,              # style (bold, etc.)
+            wx.NORMAL               # weight
+            )
+
+        # Not currently in use.
+        self.sans = wx.Font(
+            10,                     # size
+            wx.FONTFAMILY_DEFAULT,  # family
+            wx.NORMAL,              # style (bold, etc.)
+            wx.NORMAL               # weight
+            )
+
+# INITIALIZE GUI
+
         wx.Frame.__init__(self, None, wx.ID_ANY, title='nebulousChat')
 
         # Add a panel so it looks correct on all platforms
@@ -21,6 +40,12 @@ class MainFrame(wx.Frame):
             wx.TR_NO_LINES)
 
         nickStr = "GP"
+        
+        self.twoCharTuples = ((chr(x), chr(y)) 
+            for x in xrange(ord("1"), ord("~")+1) 
+            for y in xrange(ord("1"), ord("~")+1)
+            )
+        self.replyBranchID = 0
 
         self.nickButton = wx.Button(
             self.panel, wx.ID_ANY, "<" + nickStr + ">")
@@ -31,14 +56,19 @@ class MainFrame(wx.Frame):
 
         self.prompt = wx.TextCtrl(
             self.panel, style=wx.TE_PROCESS_ENTER)
-        self.prompt.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
-        self.prompt.Bind(wx.EVT_KILL_FOCUS, self.onLoseFocus)
+        self.prompt.Bind(wx.EVT_TEXT_ENTER, self.onPromptEnter)
+        self.prompt.Bind(wx.EVT_KILL_FOCUS, self.onPromptLoseFocus)
 
         self.multilineInputButton = wx.Button(
             self.panel, wx.ID_ANY, "Multi-line input...")
         self.multilineInputButton.Bind(wx.EVT_BUTTON,
             lambda event: self.onMultilineInputButtonPress(event)
             )
+
+        self.branchSelector = wx.TextCtrl(
+            self.panel, style=wx.TE_PROCESS_ENTER)
+        self.branchSelector.SetFont(self.fixed)
+        self.branchSelector.Bind(wx.EVT_TEXT_ENTER, self.onBranchSelectorEnter)
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
         topSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -49,6 +79,7 @@ class MainFrame(wx.Frame):
         bottomSizer.Add(self.nickButton, 0, wx.CENTRE)
         bottomSizer.Add(self.prompt, 1, wx.CENTRE)
         bottomSizer.Add(self.multilineInputButton, 0, wx.CENTRE)
+        bottomSizer.Add(self.branchSelector, 0, wx.CENTRE)
 
         mainSizer.Add(topSizer, 1, wx.EXPAND)
         mainSizer.Add(wx.StaticLine(self.panel,), 0, wx.ALL|wx.EXPAND)
@@ -57,6 +88,9 @@ class MainFrame(wx.Frame):
         self.panel.SetSizer(mainSizer)
         topSizer.Fit(self)
         self.SetSize(wx.Size(600,600))
+
+
+# CONNECT AND SET UP GRAPH DRAWING
 
         def connect():
             connectDialog = wx.TextEntryDialog(self, "Enter host:", "Connect")
@@ -69,10 +103,24 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
-        self.root = self.graph.AddRoot(str(self.client.baseMessageTree.message))
+        twoCharTuple = self.twoCharTuples.next()
+        self.root = self.graph.AddRoot(  "Server<" 
+                                       + twoCharTuple[0] + twoCharTuple[1] + ">  "
+                                       + str(self.client.baseMessageTree.message)
+                                      )
         self.graph.SetPyData(self.root, 0)
 
         self.graphNodes = {0: self.root}
+        self.nicks = {
+            None: "Server",
+            0: "Alfie", 
+            1: "Bobby",
+            2: "Chop-chop",
+            3: "Danny",
+            4: "Errol",
+            5: "Flynn"
+        }
+        self.twoCharStrings = {0: twoCharTuple[0] + twoCharTuple[1]}
 
         self.graph.Bind(
             wx.EVT_TREE_ITEM_ACTIVATED, self.onSelChanged, id=wx.ID_ANY)
@@ -85,11 +133,14 @@ class MainFrame(wx.Frame):
         listenThread.start()
 
         self.prompt.SetFocus()
-        self.prompt.Bind(wx.EVT_SET_FOCUS, self.onFocus)
+        self.prompt.Bind(wx.EVT_SET_FOCUS, self.onPromptGainFocus)
 
+
+    # Custom multi-line text-entry.
     class TextEntryDialog(wx.Dialog):
         def __init__(self, parent, title, caption):
             style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+            # No idea what's going on here.
             super(type(self), self).__init__(parent, -1, title, style=style)
             text = wx.StaticText(self, -1, caption)
             input = wx.TextCtrl(self, -1, style=wx.TE_MULTILINE)
@@ -109,8 +160,12 @@ class MainFrame(wx.Frame):
             self.input.SetSelection(-1,-1)
             self.input.SetFocus()
 
+    # Graph: visible stuff. MessageTree: data structure.
     class Graph(wx.TreeCtrl):
         pass
+
+
+# BUTTON PRESS FUNCTIONS
 
     def onNickButtonPress(self, event, nickStr):
         nickDialog = wx.TextEntryDialog(
@@ -132,24 +187,45 @@ class MainFrame(wx.Frame):
         multilineInputDialog.Destroy()
         self.prompt.SetFocus()
 
-    def onSelChanged(self, event):
-        self.replyBranchID = self.graph.GetPyData(event.GetItem())
-        self.setFocusToPrompt()
+
+# PROMPT FUNCTIONS
 
     def setFocusToPrompt(self):
         self.prompt.SetFocus()
 
-    def onFocus(self, event):
+    def onPromptGainFocus(self, event):
         pass
 
-    def onLoseFocus(self, event):
+    def onPromptLoseFocus(self, event):
         pass
 
-    def onEnter(self, event):
+    def onPromptEnter(self, event):
         txt = str(self.prompt.GetValue())
         self.client.messageIn.put(m.ChatMessage(
                 self.replyBranchID, self.client.ID, timestamp(), txt))
         self.prompt.Clear()
+
+
+# BRANCH SELECTOR FUNCTIONS
+
+    def onBranchSelectorEnter(self, event):
+        newBranch = self.branchSelector.GetValue()
+        self.branchSelector.SetValue(  "branch " 
+                                     + self.twoCharStrings[self.replyBranchID])
+
+        self.setFocusToPrompt()
+
+    def reprintBranchSelectorText(self):
+        self.branchSelector.SetValue(  "branch " 
+                                     + self.twoCharStrings[self.replyBranchID])
+
+
+# GRAPH ACTION FUNCTIONS
+
+    def onSelChanged(self, event):
+        self.replyBranchID = self.graph.GetPyData(event.GetItem())
+        self.reprintBranchSelectorText()
+        self.setFocusToPrompt()
 
     def drawMessageTree(self, newMessageTree, isBaseMessageTree=False):
         if isBaseMessageTree:
@@ -164,20 +240,18 @@ class MainFrame(wx.Frame):
                 self.graphNodes[messageTree.message.ID] = \
                     self.graph.AppendItem(
                         self.graphNodes[messageTree.message.parentID], 
-                        str(messageTree.message)
+                        (  self.nicks[messageTree.message.clientID] + "<"
+                         + self.twoCharStrings[messageTree.message.ID]
+                         + ">  " + str(messageTree.message))
                         )
                 if "\n" in str(messageTree.message):
                     print "Setting fixed font on " + str(messageTree.message)
                     self.graph.SetItemFont(
                         self.graphNodes[messageTree.message.ID],
-                        wx.Font(
-                            10,
-                            wx.FONTFAMILY_MODERN,
-                            1,
-                            self.graph.GetItemFont(self.root).GetWeight()
-                            )
+                        self.fixed
                         )
-                # Associate the message ID with its node in the graph.
+                # Associate the message ID with its node in the graph
+                # for inverse-lookup purposes.
                 self.graph.SetPyData(
                     self.graphNodes[messageTree.message.ID],
                     messageTree.message.ID
@@ -185,12 +259,21 @@ class MainFrame(wx.Frame):
             self.graph.ExpandAll()
             self.graph.ScrollTo(self.graphNodes[newMessageTree.message.ID])
 
+    def assignTwoCharStrings(self, newMessageTree):
+        print "Doing shit!"
+        for messageTree in newMessageTree.traverse():
+            twoCharTuple = self.twoCharTuples.next()
+            self.twoCharStrings[messageTree.message.ID] = \
+                twoCharTuple[0] + twoCharTuple[1]
+
 
     def listen(self, client):
+        self.assignTwoCharStrings(client.baseMessageTree)
         self.drawMessageTree(client.baseMessageTree, True)
         while True:
             # Wait until the client processes a message, then redraw the graph.
             newMessageTree = client.messageTreeOut.get()
+            self.assignTwoCharStrings(newMessageTree)
             self.drawMessageTree(newMessageTree)
 
 
