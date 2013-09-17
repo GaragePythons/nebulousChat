@@ -37,12 +37,14 @@ def bootClient(SERVER_DETAILS):
     client.listenSocket = n.openListenPort(SERVER_DETAILS, serializedClientID)
     client.ID = unserialize(serializedClientID)
 
-    client.baseMessageTree = unserialize(n.receive(client.listenSocket))
-    client.baseMessageTree.message.ID = 0
-
     # "In" = "in from server"; "Out" = "out to GUI"
     client.messageIn = Queue.Queue()
     client.messageTreeOut = Queue.Queue()
+
+    client.baseMessageTree = unserialize(n.receive(client.listenSocket))
+    client.baseMessageTree.message.ID = 0
+
+    client.messageTreeOut.put(client.baseMessageTree)
 
     speakThread = threading.Thread(
         target=speak, 

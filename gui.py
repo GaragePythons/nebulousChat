@@ -37,7 +37,7 @@ class MainFrame(wx.Frame):
         self.graph = self.Graph(
             self.panel, wx.ID_ANY, wx.DefaultPosition, 
             (-1,-1), wx.TR_HAS_BUTTONS|wx.TR_HAS_VARIABLE_ROW_HEIGHT|
-            wx.TR_NO_LINES)
+            wx.TR_ROW_LINES)
 
         nickStr = "GP"
         
@@ -45,6 +45,7 @@ class MainFrame(wx.Frame):
             for x in xrange(ord("1"), ord("~")+1) 
             for y in xrange(ord("1"), ord("~")+1)
             )
+        self.twoCharStrings = {}
         self.replyBranchID = 0
 
         self.nickButton = wx.Button(
@@ -103,15 +104,6 @@ class MainFrame(wx.Frame):
 
         self.client = connect()
 
-        self.twoCharTuple = self.twoCharTuples.next()
-        self.root = self.graph.AddRoot(  "Server<" 
-                                       + self.twoCharTuple[0] 
-                                       + self.twoCharTuple[1] + ">  "
-                                       + str(self.client.baseMessageTree.message)
-                                      )
-        self.graph.SetPyData(self.root, 0)
-
-        self.graphNodes = {0: self.root}
         self.nicks = {
             None: "Server",
             0: "Alfie", 
@@ -121,12 +113,9 @@ class MainFrame(wx.Frame):
             4: "Errol",
             5: "Flynn"
         }
-        self.twoCharStrings = {0: self.twoCharTuple[0] + self.twoCharTuple[1]}
 
         self.graph.Bind(
             wx.EVT_TREE_ITEM_ACTIVATED, self.onSelChanged, id=wx.ID_ANY)
-
-        self.reprintBranchSelectorText()
 
         listenThread = threading.Thread(
             target = self.listen,
@@ -228,6 +217,10 @@ class MainFrame(wx.Frame):
     def reprintBranchSelectorText(self):
         self.branchSelector.SetValue(  "branch " 
                                      + self.twoCharStrings[self.replyBranchID])
+        # Piggyback on this function to select the correct message in graph.
+        self.graph.SelectItem(self.graphNodes[self.replyBranchID])
+        # Also scroll to where the user probably wants to be.
+        self.scrollToBottomOfBranch(self.replyBranchID)
 
 
 # GRAPH ACTION FUNCTIONS
@@ -237,9 +230,20 @@ class MainFrame(wx.Frame):
         self.reprintBranchSelectorText()
         self.setFocusToPrompt()
 
+    def scrollToBottomOfBranch(self, branchID):
+        pass
+
     def drawMessageTree(self, newMessageTree, isBaseMessageTree=False):
         if isBaseMessageTree:
             print "Drawing base"
+            self.root = self.graph.AddRoot("Server<" 
+                + self.twoCharStrings[0] + ">  "
+                + str(newMessageTree.message))
+            self.graphNodes = {0: self.root}
+            # Associate the root graph node with message ID 0
+            # for inverse-lookup purposes.
+            self.graph.SetPyData(self.root, 0)
+            self.reprintBranchSelectorText()
             for messageTree in newMessageTree.children:
                 self.drawMessageTree(messageTree)
         else:
@@ -247,20 +251,28 @@ class MainFrame(wx.Frame):
                 print (  "Drawing message from client " 
                        + str(messageTree.message.clientID) + ": "
                        + str(messageTree.message))
-                self.graphNodes[messageTree.message.ID] = \
-                    self.graph.AppendItem(
-                        self.graphNodes[messageTree.message.parentID], 
-                        (  self.nicks[messageTree.message.clientID] + "<"
-                         + self.twoCharStrings[messageTree.message.ID]
-                         + ">  " + str(messageTree.message))
-                        )
-                if "\n" in str(messageTree.message):
+                if not "\n" in str(messageTree.message):
+                    self.graphNodes[messageTree.message.ID] = \
+                        self.graph.AppendItem(
+                            self.graphNodes[messageTree.message.parentID], 
+                            (  self.nicks[messageTree.message.clientID] + "<"
+                             + self.twoCharStrings[messageTree.message.ID]
+                             + ">  " + str(messageTree.message))
+                            )
+                else:
+                    self.graphNodes[messageTree.message.ID] = \
+                        self.graph.AppendItem(
+                            self.graphNodes[messageTree.message.parentID], 
+                            (  self.nicks[messageTree.message.clientID] + "<"
+                             + self.twoCharStrings[messageTree.message.ID]
+                             + ">\n" + str(messageTree.message))
+                            )
                     print "Setting fixed font on " + str(messageTree.message)
                     self.graph.SetItemFont(
                         self.graphNodes[messageTree.message.ID],
                         self.fixed
                         )
-                # Associate the message ID with its node in the graph
+                # Associate the graph node with its message ID
                 # for inverse-lookup purposes.
                 self.graph.SetPyData(
                     self.graphNodes[messageTree.message.ID],
@@ -271,14 +283,15 @@ class MainFrame(wx.Frame):
 
     def assignTwoCharStrings(self, newMessageTree):
         for messageTree in newMessageTree.traverse():
+            self.twoCharTuple = self.twoCharTuples.next()
             self.twoCharStrings[messageTree.message.ID] = \
                 self.twoCharTuple[0] + self.twoCharTuple[1]
-            self.twoCharTuple = self.twoCharTuples.next()
-
 
     def listen(self, client):
-        self.assignTwoCharStrings(client.baseMessageTree)
-        self.drawMessageTree(client.baseMessageTree, True)
+        # Expect first message tree to be the base message tree.
+        newMessageTree = client.messageTreeOut.get()
+        self.assignTwoCharStrings(newMessageTree)
+        self.drawMessageTree(newMessageTree, True)
         while True:
             # Wait until the client processes a message, then redraw the graph.
             newMessageTree = client.messageTreeOut.get()
